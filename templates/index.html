@@ -1,0 +1,278 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Gerador de Vídeos Curtos</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      background: #0a0a0a;
+      color: #f0f0f0;
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 24px;
+    }
+
+    .card {
+      width: 100%;
+      max-width: 620px;
+      background: #111;
+      border: 1px solid #222;
+      border-radius: 20px;
+      padding: 36px 32px;
+    }
+
+    h1 {
+      font-size: 1.7rem;
+      font-weight: 700;
+      background: linear-gradient(135deg, #ff0050 0%, #7928ca 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+      margin-bottom: 6px;
+    }
+
+    .subtitle {
+      color: #666;
+      font-size: 0.875rem;
+      margin-bottom: 28px;
+    }
+
+    .input-row {
+      display: flex;
+      gap: 10px;
+      margin-bottom: 24px;
+    }
+
+    #topic {
+      flex: 1;
+      padding: 13px 16px;
+      background: #1a1a1a;
+      border: 1px solid #2a2a2a;
+      border-radius: 12px;
+      color: #f0f0f0;
+      font-size: 0.95rem;
+      outline: none;
+      transition: border-color 0.2s;
+    }
+
+    #topic:focus { border-color: #7928ca; }
+    #topic::placeholder { color: #444; }
+
+    #btn {
+      padding: 13px 22px;
+      background: linear-gradient(135deg, #ff0050, #7928ca);
+      border: none;
+      border-radius: 12px;
+      color: #fff;
+      font-size: 0.95rem;
+      font-weight: 600;
+      cursor: pointer;
+      white-space: nowrap;
+      transition: opacity 0.2s;
+    }
+
+    #btn:disabled { opacity: 0.45; cursor: not-allowed; }
+
+    .progress-box {
+      display: none;
+      background: #0f0f0f;
+      border: 1px solid #1e1e1e;
+      border-radius: 14px;
+      padding: 20px;
+    }
+
+    .progress-box.show { display: block; }
+
+    .status-row {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin-bottom: 14px;
+      font-size: 0.875rem;
+      color: #aaa;
+    }
+
+    .spinner {
+      width: 16px;
+      height: 16px;
+      border: 2px solid #2a2a2a;
+      border-top-color: #7928ca;
+      border-radius: 50%;
+      animation: spin 0.7s linear infinite;
+      flex-shrink: 0;
+    }
+
+    .spinner.hidden { display: none; }
+
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    .log {
+      font-family: 'SF Mono', 'Fira Code', monospace;
+      font-size: 0.8rem;
+      color: #555;
+      line-height: 1.9;
+      max-height: 180px;
+      overflow-y: auto;
+    }
+
+    .log .step   { color: #9b5de5; }
+    .log .ok     { color: #00c853; font-weight: 600; }
+    .log .err    { color: #ff1744; font-weight: 600; }
+
+    .download-btn {
+      display: inline-block;
+      margin-top: 18px;
+      padding: 12px 26px;
+      background: #00c853;
+      color: #000;
+      font-weight: 700;
+      font-size: 0.9rem;
+      border-radius: 10px;
+      text-decoration: none;
+      transition: opacity 0.2s;
+    }
+
+    .download-btn:hover { opacity: 0.85; }
+
+    .examples {
+      margin-top: 20px;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+    }
+
+    .chip {
+      padding: 6px 12px;
+      background: #1a1a1a;
+      border: 1px solid #2a2a2a;
+      border-radius: 20px;
+      font-size: 0.78rem;
+      color: #888;
+      cursor: pointer;
+      transition: border-color 0.2s, color 0.2s;
+    }
+
+    .chip:hover { border-color: #7928ca; color: #ccc; }
+  </style>
+</head>
+<body>
+<div class="card">
+  <h1>Gerador de Vídeos Curtos</h1>
+  <p class="subtitle">Digite um tema e gere um vídeo de 58s pronto para Shorts, Reels e TikTok</p>
+
+  <div class="input-row">
+    <input id="topic" type="text" placeholder="Ex: curiosidades sobre buracos negros" />
+    <button id="btn" onclick="generate()">Gerar</button>
+  </div>
+
+  <div class="examples">
+    <span class="chip" onclick="setTopic(this)">curiosidades sobre o espaço</span>
+    <span class="chip" onclick="setTopic(this)">dicas para dormir melhor</span>
+    <span class="chip" onclick="setTopic(this)">fatos sobre o oceano</span>
+    <span class="chip" onclick="setTopic(this)">hábitos de pessoas produtivas</span>
+  </div>
+
+  <div class="progress-box" id="progress-box" style="margin-top:24px">
+    <div class="status-row">
+      <div class="spinner" id="spinner"></div>
+      <span id="status-text">Iniciando...</span>
+    </div>
+    <div class="log" id="log"></div>
+    <div id="download-area"></div>
+  </div>
+</div>
+
+<script>
+  let es = null;
+
+  function setTopic(el) {
+    document.getElementById('topic').value = el.textContent;
+    document.getElementById('topic').focus();
+  }
+
+  function generate() {
+    const topic = document.getElementById('topic').value.trim();
+    if (!topic) { document.getElementById('topic').focus(); return; }
+
+    const btn = document.getElementById('btn');
+    btn.disabled = true;
+
+    const box = document.getElementById('progress-box');
+    box.classList.add('show');
+    document.getElementById('log').innerHTML = '';
+    document.getElementById('download-area').innerHTML = '';
+    document.getElementById('spinner').classList.remove('hidden');
+    document.getElementById('status-text').textContent = 'Iniciando...';
+
+    fetch('/generate', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ topic })
+    })
+    .then(r => r.json())
+    .then(d => { if (d.error) { showError(d.error); } else { listen(d.job_id); } })
+    .catch(e => showError(e.toString()));
+  }
+
+  function listen(jobId) {
+    if (es) es.close();
+    es = new EventSource('/progress/' + jobId);
+    const log = document.getElementById('log');
+    const statusText = document.getElementById('status-text');
+
+    es.onmessage = function(e) {
+      const d = JSON.parse(e.data);
+
+      if (d.message) {
+        const div = document.createElement('div');
+        if (d.message.startsWith('[')) div.className = 'step';
+        div.textContent = d.message;
+        log.appendChild(div);
+        log.scrollTop = log.scrollHeight;
+        if (d.message.startsWith('[')) statusText.textContent = d.message;
+      }
+
+      if (d.done) {
+        es.close();
+        document.getElementById('spinner').classList.add('hidden');
+        statusText.textContent = 'Concluído!';
+
+        const ok = document.createElement('div');
+        ok.className = 'ok';
+        ok.textContent = '✓ Vídeo gerado com sucesso!';
+        log.appendChild(ok);
+
+        document.getElementById('download-area').innerHTML =
+          `<a class="download-btn" href="/download/${d.output}" download>⬇ Baixar Vídeo</a>`;
+        document.getElementById('btn').disabled = false;
+      }
+
+      if (d.error) showError(d.error);
+    };
+
+    es.onerror = function() { es.close(); showError('Conexão perdida com o servidor.'); };
+  }
+
+  function showError(msg) {
+    document.getElementById('spinner').classList.add('hidden');
+    document.getElementById('status-text').textContent = 'Erro';
+    const div = document.createElement('div');
+    div.className = 'err';
+    div.textContent = '✗ ' + msg;
+    document.getElementById('log').appendChild(div);
+    document.getElementById('btn').disabled = false;
+    if (es) es.close();
+  }
+
+  document.getElementById('topic').addEventListener('keydown', e => {
+    if (e.key === 'Enter') generate();
+  });
+</script>
+</body>
+</html>
