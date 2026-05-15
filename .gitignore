@@ -1,0 +1,9 @@
+.env
+youtube_token.pickle
+client_secrets.json
+temp/
+output/
+__pycache__/
+*.pyc
+*.pyo
+.DS_Store
