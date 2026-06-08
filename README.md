@@ -118,6 +118,29 @@ maior qualidade (ou de vídeo) no futuro, em `pipeline/ai_image_generator.py`.
 > `#IA`, e ao postar no TikTok/YouTube **marque a opção "conteúdo gerado por IA"**.
 > Use só pra entreter/atrair — os agendamentos vêm dos vídeos do trabalho real.
 
+## Vinheta de marca (logo animado + CTA) ✨
+
+Adiciona o **logo da Nail Sosuka entrando e saindo** com um "pop" (escala + fade)
+e uma chamada pra ação. Funciona com os modos `--photos` e `--ai-nails`.
+
+```bash
+# Abre e fecha com a vinheta da marca
+python main.py "unhas de lava" --ai-nails 5 --brand both --handle @nailsosuka
+
+# Só no fechamento (logo + CTA + @perfil sobre fundo escurecido)
+python main.py "francesinha rosa" --photos ./fotos --brand outro --handle @nailsosuka
+
+# Só na abertura
+python main.py "nail art floral" --photos ./fotos --brand intro --handle @nailsosuka
+```
+
+- `--brand intro|outro|both` — onde a vinheta aparece.
+- `--logo FILE` — logo PNG (padrão: `assets/logo.png`, já incluso).
+- `--handle @perfil` — o @ mostrado na vinheta.
+
+No **fechamento**, a vinheta escurece o fundo e mostra logo + CTA + @perfil; o CTA
+simples de rodapé é suprimido automaticamente pra não duplicar.
+
 ## Formato de saída
 
 - Resolução: **1080×1920** (9:16, vertical — Shorts/Reels)
