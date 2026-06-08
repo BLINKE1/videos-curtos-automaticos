@@ -13,5 +13,8 @@ VIDEO_HEIGHT = 1920
 VIDEO_FPS = 30
 TARGET_DURATION = 58
 
+# Modo slideshow (fotos reais): tempo de cada foto na tela quando não há narração
+SECONDS_PER_IMAGE = float(os.getenv("SECONDS_PER_IMAGE", "3.0"))
+
 OUTPUT_DIR = "output"
 TEMP_DIR = "temp"
