@@ -57,6 +57,9 @@ def build_slideshow(
     cta: str = None,
     seconds_per_image: float = SECONDS_PER_IMAGE,
     zoom: float = KEN_BURNS_ZOOM,
+    logo_path: str = None,
+    brand: str = None,
+    handle: str = None,
 ) -> str:
     narration = AudioFileClip(narration_path) if narration_path else None
 
@@ -68,10 +71,14 @@ def build_slideshow(
     base = concatenate_videoclips(clips, method="compose", padding=-CROSSFADE)
     duration = base.duration
 
+    brand = (brand or "").lower() or None
+    has_outro = brand in ("outro", "both")
+
     layers = [base]
     if hook:
         layers.append(make_text_clip(hook, 0.3, min(3.5, duration), position="top"))
-    if cta:
+    # o CTA simples só aparece quando NÃO há vinheta de fechamento (que já traz o CTA)
+    if cta and not has_outro:
         layers.append(
             make_text_clip(cta, max(0.0, duration - 3.0), duration, position="bottom")
         )
@@ -79,6 +86,20 @@ def build_slideshow(
         from pipeline.video_editor import _build_subtitles
 
         layers.extend(_build_subtitles(word_boundaries, duration))
+
+    if brand:
+        from pipeline.brand import brand_overlays
+
+        layers.extend(
+            brand_overlays(
+                logo_path,
+                duration,
+                intro=brand in ("intro", "both"),
+                outro=has_outro,
+                cta=cta,
+                handle=handle,
+            )
+        )
 
     video = CompositeVideoClip(layers, size=(VIDEO_WIDTH, VIDEO_HEIGHT))
     video = video.set_audio(_build_audio(narration, music_path, duration))

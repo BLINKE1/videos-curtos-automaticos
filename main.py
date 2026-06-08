@@ -67,6 +67,9 @@ def create_nail_slideshow(
     narrate: bool = False,
     upload: bool = False,
     privacy: str = "private",
+    logo: str = None,
+    brand: str = None,
+    handle: str = None,
 ) -> str:
     """Monta um Short/TikTok a partir de fotos reais do trabalho de unhas."""
     timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
@@ -103,6 +106,9 @@ def create_nail_slideshow(
             word_boundaries=word_boundaries,
             hook=caption.get("hook"),
             cta=caption.get("cta"),
+            logo_path=logo,
+            brand=brand,
+            handle=handle,
         )
         print(f"      Salvo em: {output_path}")
 
@@ -121,6 +127,9 @@ def create_fantasy_nail_video(
     music: str = None,
     upload: bool = False,
     privacy: str = "private",
+    logo: str = None,
+    brand: str = None,
+    handle: str = None,
 ) -> str:
     """Gera um vídeo de "unha impossível" com imagens criadas por IA.
 
@@ -155,6 +164,9 @@ def create_fantasy_nail_video(
             cta=content.get("cta"),
             seconds_per_image=FANTASY_SECONDS_PER_IMAGE,
             zoom=FANTASY_ZOOM,
+            logo_path=logo,
+            brand=brand,
+            handle=handle,
         )
         print(f"      Salvo em: {output_path}")
 
@@ -204,6 +216,21 @@ if __name__ == "__main__":
         action="store_true",
         help="Adiciona narração (TTS) por cima das fotos no modo slideshow",
     )
+    parser.add_argument(
+        "--brand",
+        choices=["intro", "outro", "both"],
+        help="Vinheta com o logo animado + CTA (abre, fecha ou ambos)",
+    )
+    parser.add_argument(
+        "--logo",
+        metavar="FILE",
+        help="Caminho do logo PNG (padrão: assets/logo.png da Nail Sosuka)",
+    )
+    parser.add_argument(
+        "--handle",
+        metavar="@perfil",
+        help="@ do perfil mostrado na vinheta (ex.: @nailsosuka)",
+    )
     parser.add_argument("--upload", action="store_true", help="Fazer upload para YouTube")
     parser.add_argument(
         "--privacy",
@@ -220,6 +247,9 @@ if __name__ == "__main__":
             music=args.music,
             upload=args.upload,
             privacy=args.privacy,
+            logo=args.logo,
+            brand=args.brand,
+            handle=args.handle,
         )
     elif args.photos:
         create_nail_slideshow(
@@ -229,6 +259,9 @@ if __name__ == "__main__":
             narrate=args.narrate,
             upload=args.upload,
             privacy=args.privacy,
+            logo=args.logo,
+            brand=args.brand,
+            handle=args.handle,
         )
     else:
         create_short(args.topic, upload=args.upload, privacy=args.privacy)
