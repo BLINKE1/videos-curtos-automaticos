@@ -56,6 +56,7 @@ def build_slideshow(
     hook: str = None,
     cta: str = None,
     seconds_per_image: float = SECONDS_PER_IMAGE,
+    zoom: float = KEN_BURNS_ZOOM,
 ) -> str:
     narration = AudioFileClip(narration_path) if narration_path else None
 
@@ -63,7 +64,7 @@ def build_slideshow(
     if narration:
         seconds_per_image = max(narration.duration / max(len(media_paths), 1), 1.5)
 
-    clips = _build_media_clips(media_paths, seconds_per_image)
+    clips = _build_media_clips(media_paths, seconds_per_image, zoom)
     base = concatenate_videoclips(clips, method="compose", padding=-CROSSFADE)
     duration = base.duration
 
@@ -96,14 +97,14 @@ def build_slideshow(
     return output_path
 
 
-def _build_media_clips(paths: list, seconds_per_image: float) -> list:
+def _build_media_clips(paths: list, seconds_per_image: float, zoom: float) -> list:
     clips = []
     for i, path in enumerate(paths):
         try:
             if path.lower().endswith(VIDEO_EXTS):
                 clip = _video_clip(path)
             else:
-                clip = _photo_clip(path, seconds_per_image)
+                clip = _photo_clip(path, seconds_per_image, zoom)
         except Exception as e:
             print(f"      Aviso: não foi possível usar {path}: {e}")
             continue
@@ -117,13 +118,11 @@ def _build_media_clips(paths: list, seconds_per_image: float) -> list:
     return clips
 
 
-def _photo_clip(path: str, duration: float):
+def _photo_clip(path: str, duration: float, zoom: float = KEN_BURNS_ZOOM):
     """Foto enquadrada em 9:16 com efeito Ken Burns (zoom suave)."""
     frame = _cover_image(path)
     clip = ImageClip(frame).set_duration(duration)
-    zoomed = clip.resize(lambda t: 1 + KEN_BURNS_ZOOM * t / duration).set_position(
-        "center"
-    )
+    zoomed = clip.resize(lambda t: 1 + zoom * t / duration).set_position("center")
     return CompositeVideoClip(
         [zoomed], size=(VIDEO_WIDTH, VIDEO_HEIGHT)
     ).set_duration(duration)

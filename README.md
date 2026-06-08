@@ -94,6 +94,30 @@ as hashtags automaticamente.
 > Dica: o tempo de cada foto na tela é controlado por `SECONDS_PER_IMAGE` no
 > `.env` (padrão 3s). Com `--narrate`, o ritmo acompanha a duração da narração.
 
+## Modo "unha impossível" (imagens geradas por IA 🔥)
+
+Conteúdo de **fantasia** — unhas impossíveis (lava, raios, galáxia, cristal...) —
+para servir de **isca de atenção** e ser intercalado com os vídeos das unhas
+reais. As imagens são geradas por IA (text-to-image) a partir de prompts que a
+própria IA (Groq) cria, e montadas com um preset dramático (cortes rápidos +
+zoom forte).
+
+```bash
+# Gera 5 cenas de unha impossível sobre o tema
+python main.py "unhas de lava vulcânica" --ai-nails 5 --music ./epic.mp3
+
+# Gera e sobe pro YouTube Shorts
+python main.py "unhas de raio elétrico" --ai-nails 6 --upload --privacy public
+```
+
+O backend de imagem é **gratuito e sem chave** ([Pollinations](https://pollinations.ai),
+`IMAGE_PROVIDER=pollinations`) e plugável — dá pra trocar por um serviço pago de
+maior qualidade (ou de vídeo) no futuro, em `pipeline/ai_image_generator.py`.
+
+> ⚠️ **Transparência:** é conteúdo gerado por IA. A descrição já inclui a hashtag
+> `#IA`, e ao postar no TikTok/YouTube **marque a opção "conteúdo gerado por IA"**.
+> Use só pra entreter/atrair — os agendamentos vêm dos vídeos do trabalho real.
+
 ## Formato de saída
 
 - Resolução: **1080×1920** (9:16, vertical — Shorts/Reels)

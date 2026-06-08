@@ -4,13 +4,22 @@ import shutil
 from datetime import datetime
 
 from config import OUTPUT_DIR, TEMP_DIR
-from pipeline.script_generator import generate_script, generate_nail_caption
+from pipeline.script_generator import (
+    generate_script,
+    generate_nail_caption,
+    generate_fantasy_nail_prompts,
+)
 from pipeline.tts_generator import generate_audio
 from pipeline.broll_fetcher import fetch_broll_videos
 from pipeline.video_editor import assemble_video
 from pipeline.photo_slideshow import collect_media, build_slideshow
+from pipeline.ai_image_generator import generate_images
 from pipeline.youtube_uploader import upload_video
 from utils.helpers import ensure_dirs, clean_filename
+
+# Preset dramático para o modo "unha impossível": cortes mais rápidos e zoom forte
+FANTASY_SECONDS_PER_IMAGE = 2.5
+FANTASY_ZOOM = 0.18
 
 
 def create_short(topic: str, upload: bool = False, privacy: str = "private") -> str:
@@ -106,6 +115,58 @@ def create_nail_slideshow(
         shutil.rmtree(run_dir, ignore_errors=True)
 
 
+def create_fantasy_nail_video(
+    theme: str,
+    count: int = 5,
+    music: str = None,
+    upload: bool = False,
+    privacy: str = "private",
+) -> str:
+    """Gera um vídeo de "unha impossível" com imagens criadas por IA.
+
+    Conteúdo de fantasia (lava, raios, galáxia...) para servir de isca de atenção
+    e ser intercalado com os vídeos das unhas reais.
+    """
+    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+    run_dir = os.path.join(TEMP_DIR, timestamp)
+    img_dir = os.path.join(run_dir, "ai_images")
+    ensure_dirs(run_dir, img_dir, OUTPUT_DIR)
+
+    try:
+        print(f"\n=== Unha impossível (IA): {theme} ===\n")
+
+        print("[1/4] Gerando ideias e prompts com IA...")
+        content = generate_fantasy_nail_prompts(theme, count=count)
+        prompts = content["image_prompts"]
+        print(f"      {len(prompts)} cenas | Título: {content['title']}")
+
+        print("[2/4] Gerando imagens por IA...")
+        image_paths = generate_images(prompts, img_dir)
+        print(f"      {len(image_paths)} imagens prontas")
+
+        print("[3/4] Montando vídeo (preset dramático)...")
+        output_filename = f"{timestamp}_ia_{clean_filename(theme)}.mp4"
+        output_path = os.path.join(OUTPUT_DIR, output_filename)
+        build_slideshow(
+            image_paths,
+            output_path,
+            music_path=music,
+            hook=content.get("hook"),
+            cta=content.get("cta"),
+            seconds_per_image=FANTASY_SECONDS_PER_IMAGE,
+            zoom=FANTASY_ZOOM,
+        )
+        print(f"      Salvo em: {output_path}")
+
+        _maybe_upload(upload, output_path, content, privacy, step="[4/4]")
+
+        print("\n=== Concluído! Lembre de marcar como 'conteúdo gerado por IA' ao postar ===")
+        return output_path
+
+    finally:
+        shutil.rmtree(run_dir, ignore_errors=True)
+
+
 def _maybe_upload(upload: bool, output_path: str, meta: dict, privacy: str, step: str):
     if upload:
         print(f"{step} Fazendo upload para o YouTube...")
@@ -130,6 +191,12 @@ if __name__ == "__main__":
         help="Pasta com fotos/clipes reais — ativa o modo slideshow de unhas",
     )
     parser.add_argument(
+        "--ai-nails",
+        type=int,
+        metavar="N",
+        help="Modo 'unha impossível': gera N imagens por IA (lava, raios, etc.)",
+    )
+    parser.add_argument(
         "--music", metavar="FILE", help="Trilha de fundo (mp3) para o slideshow"
     )
     parser.add_argument(
@@ -146,7 +213,15 @@ if __name__ == "__main__":
     )
     args = parser.parse_args()
 
-    if args.photos:
+    if args.ai_nails:
+        create_fantasy_nail_video(
+            args.topic,
+            count=args.ai_nails,
+            music=args.music,
+            upload=args.upload,
+            privacy=args.privacy,
+        )
+    elif args.photos:
         create_nail_slideshow(
             args.topic,
             args.photos,

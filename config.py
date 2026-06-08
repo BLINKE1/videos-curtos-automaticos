@@ -16,5 +16,9 @@ TARGET_DURATION = 58
 # Modo slideshow (fotos reais): tempo de cada foto na tela quando não há narração
 SECONDS_PER_IMAGE = float(os.getenv("SECONDS_PER_IMAGE", "3.0"))
 
+# Modo "unha impossível" (imagens geradas por IA)
+IMAGE_PROVIDER = os.getenv("IMAGE_PROVIDER", "pollinations")  # grátis, sem chave
+IMAGE_MODEL = os.getenv("IMAGE_MODEL", "flux")
+
 OUTPUT_DIR = "output"
 TEMP_DIR = "temp"
