@@ -1,7 +1,7 @@
 import os
 import math
 import numpy as np
-from PIL import Image, ImageDraw, ImageFont
+from PIL import Image, ImageDraw
 from moviepy import (
     VideoFileClip,
     AudioFileClip,
@@ -13,14 +13,7 @@ from moviepy import (
 )
 from moviepy.video.fx import FadeIn, FadeOut
 from config import VIDEO_WIDTH, VIDEO_HEIGHT, VIDEO_FPS
-
-FONT_PATHS = [
-    "C:\\Windows\\Fonts\\arialbd.ttf",
-    "C:\\Windows\\Fonts\\arial.ttf",
-    "/System/Library/Fonts/Supplemental/Arial Bold.ttf",
-    "/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf",
-    "/usr/share/fonts/truetype/liberation/LiberationSans-Bold.ttf",
-]
+from pipeline.text_overlay import load_font as _load_font, wrap_text as _wrap_text
 
 MUSIC_PATHS = [
     "assets/music.mp3",
@@ -177,32 +170,3 @@ def _render_subtitle(text: str, font) -> np.ndarray:
         y += line_h
 
     return np.array(img)
-
-
-def _wrap_text(text: str, font, draw, max_width: int) -> list:
-    words = text.split()
-    lines, current = [], []
-
-    for word in words:
-        test = " ".join(current + [word])
-        bbox = draw.textbbox((0, 0), test, font=font)
-        if bbox[2] - bbox[0] <= max_width:
-            current.append(word)
-        else:
-            if current:
-                lines.append(" ".join(current))
-            current = [word]
-
-    if current:
-        lines.append(" ".join(current))
-
-    return lines or [text]
-
-
-def _load_font(size: int):
-    for path in FONT_PATHS:
-        try:
-            return ImageFont.truetype(path, size)
-        except Exception:
-            pass
-    return ImageFont.load_default()
