@@ -7,7 +7,8 @@ fica um instante e sai. No fechamento, aparece junto com um CTA e o @ do perfil.
 import os
 import numpy as np
 from PIL import Image
-from moviepy.editor import ImageClip, ColorClip
+from moviepy import ImageClip, ColorClip
+from moviepy.video.fx import CrossFadeIn, CrossFadeOut, Resize
 from config import VIDEO_WIDTH, VIDEO_HEIGHT
 from pipeline.text_overlay import make_text_clip
 
@@ -52,10 +53,10 @@ def brand_overlays(
         # escurece o fundo para o cartão de encerramento ficar legível
         dark = (
             ColorClip((VIDEO_WIDTH, VIDEO_HEIGHT), color=(15, 5, 25))
-            .set_opacity(0.55)
-            .set_start(start)
-            .set_end(total_duration)
-            .crossfadein(0.4)
+            .with_opacity(0.55)
+            .with_start(start)
+            .with_end(total_duration)
+            .with_effects([CrossFadeIn(0.4)])
         )
         layers.append(dark)
         layers.append(
@@ -77,25 +78,25 @@ def brand_overlays(
 
 
 def _animated_logo(rgb, alpha, start: float, duration: float, center_y: float = None):
-    clip = ImageClip(rgb).set_duration(duration)
-    mask = ImageClip(alpha, ismask=True).set_duration(duration)
-    clip = clip.set_mask(mask)
+    clip = ImageClip(rgb).with_duration(duration)
+    mask = ImageClip(alpha, is_mask=True).with_duration(duration)
+    clip = clip.with_mask(mask)
 
     # "pop": escala de 0.7 -> 1.0 nos primeiros POP_TIME segundos
     def scale(t):
         k = min(t / POP_TIME, 1.0)
         return 0.7 + 0.3 * k
 
-    clip = clip.resize(scale)
+    clip = clip.with_effects([Resize(scale)])
 
     if center_y is None:
-        clip = clip.set_position("center")
+        clip = clip.with_position("center")
     else:
         # centraliza no eixo X, posição fixa no Y (topo do logo)
-        clip = clip.set_position(lambda t: ("center", center_y - _logo_h(rgb) / 2))
+        clip = clip.with_position(lambda t: ("center", center_y - _logo_h(rgb) / 2))
 
     fade = min(0.4, duration / 3)
-    return clip.crossfadein(fade).crossfadeout(fade).set_start(start)
+    return clip.with_effects([CrossFadeIn(fade), CrossFadeOut(fade)]).with_start(start)
 
 
 def _logo_h(rgb) -> int:

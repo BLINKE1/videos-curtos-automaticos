@@ -6,18 +6,20 @@ com efeito Ken Burns (zoom suave), transições, música e textos.
 """
 
 import os
+import math
 import glob
 import numpy as np
 from PIL import Image
-from moviepy.editor import (
+from moviepy import (
     ImageClip,
     VideoFileClip,
     AudioFileClip,
     CompositeAudioClip,
     CompositeVideoClip,
     concatenate_videoclips,
+    concatenate_audioclips,
 )
-from moviepy.audio.fx.audio_loop import audio_loop
+from moviepy.video.fx import CrossFadeIn, Resize
 from config import VIDEO_WIDTH, VIDEO_HEIGHT, VIDEO_FPS, SECONDS_PER_IMAGE
 from pipeline.text_overlay import make_text_clip
 
@@ -102,7 +104,7 @@ def build_slideshow(
         )
 
     video = CompositeVideoClip(layers, size=(VIDEO_WIDTH, VIDEO_HEIGHT))
-    video = video.set_audio(_build_audio(narration, music_path, duration))
+    video = video.with_audio(_build_audio(narration, music_path, duration))
 
     video.write_videofile(
         output_path,
@@ -131,7 +133,7 @@ def _build_media_clips(paths: list, seconds_per_image: float, zoom: float) -> li
             continue
 
         if i > 0:
-            clip = clip.crossfadein(CROSSFADE)
+            clip = clip.with_effects([CrossFadeIn(CROSSFADE)])
         clips.append(clip)
 
     if not clips:
@@ -142,18 +144,20 @@ def _build_media_clips(paths: list, seconds_per_image: float, zoom: float) -> li
 def _photo_clip(path: str, duration: float, zoom: float = KEN_BURNS_ZOOM):
     """Foto enquadrada em 9:16 com efeito Ken Burns (zoom suave)."""
     frame = _cover_image(path)
-    clip = ImageClip(frame).set_duration(duration)
-    zoomed = clip.resize(lambda t: 1 + zoom * t / duration).set_position("center")
+    clip = ImageClip(frame).with_duration(duration)
+    zoomed = clip.with_effects(
+        [Resize(lambda t: 1 + zoom * t / duration)]
+    ).with_position("center")
     return CompositeVideoClip(
         [zoomed], size=(VIDEO_WIDTH, VIDEO_HEIGHT)
-    ).set_duration(duration)
+    ).with_duration(duration)
 
 
 def _video_clip(path: str):
     clip = VideoFileClip(path).without_audio()
     clip = _crop_to_vertical(clip)
     if clip.duration > MAX_CLIP_SECONDS:
-        clip = clip.subclip(0, MAX_CLIP_SECONDS)
+        clip = clip.subclipped(0, MAX_CLIP_SECONDS)
     return clip
 
 
@@ -183,28 +187,34 @@ def _crop_to_vertical(clip):
     if clip_ratio > target_ratio:
         new_w = int(clip.h * target_ratio)
         x1 = (clip.w - new_w) // 2
-        clip = clip.crop(x1=x1, x2=x1 + new_w)
+        clip = clip.cropped(x1=x1, x2=x1 + new_w)
     elif clip_ratio < target_ratio:
         new_h = int(clip.w / target_ratio)
         y1 = (clip.h - new_h) // 2
-        clip = clip.crop(y1=y1, y2=y1 + new_h)
+        clip = clip.cropped(y1=y1, y2=y1 + new_h)
 
-    return clip.resize((VIDEO_WIDTH, VIDEO_HEIGHT))
+    return clip.resized((VIDEO_WIDTH, VIDEO_HEIGHT))
+
+
+def _loop_audio(clip: AudioFileClip, duration: float) -> AudioFileClip:
+    if clip.duration >= duration:
+        return clip.subclipped(0, duration)
+    n = math.ceil(duration / clip.duration)
+    looped = concatenate_audioclips([clip] * n)
+    return looped.subclipped(0, duration)
 
 
 def _build_audio(narration, music_path: str, duration: float):
     tracks = []
 
     if narration:
-        tracks.append(narration.subclip(0, min(narration.duration, duration)))
+        tracks.append(narration.subclipped(0, min(narration.duration, duration)))
 
     if music_path and os.path.exists(music_path):
         music = AudioFileClip(music_path)
-        if music.duration < duration:
-            music = audio_loop(music, duration=duration)
-        music = music.subclip(0, duration)
+        music = _loop_audio(music, duration)
         # música baixa por baixo da narração; alta quando é só música
-        music = music.volumex(0.15 if narration else 0.85)
+        music = music.with_volume_scaled(0.15 if narration else 0.85)
         tracks.append(music)
 
     if not tracks:

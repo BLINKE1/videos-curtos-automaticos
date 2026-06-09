@@ -5,13 +5,9 @@ Helpers compartilhados entre o editor de b-roll e o slideshow de fotos.
 
 import numpy as np
 from PIL import Image, ImageDraw, ImageFont
-from moviepy.editor import ImageClip
+from moviepy import ImageClip
+from moviepy.video.fx import CrossFadeIn, CrossFadeOut
 from config import VIDEO_WIDTH, VIDEO_HEIGHT
-
-# Compatibilidade Pillow 10+ x moviepy 1.0.3: o resize do moviepy ainda usa
-# Image.ANTIALIAS, removido no Pillow 10. Reaponta para LANCZOS (equivalente).
-if not hasattr(Image, "ANTIALIAS"):
-    Image.ANTIALIAS = Image.LANCZOS
 
 FONT_PATHS = [
     "/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf",
@@ -110,11 +106,11 @@ def make_text_clip(
     rgb = frame[:, :, :3]
     alpha = frame[:, :, 3].astype(float) / 255.0
 
-    clip = ImageClip(rgb).set_start(start).set_end(end)
-    mask = ImageClip(alpha, ismask=True).set_start(start).set_end(end)
-    clip = clip.set_mask(mask)
+    clip = ImageClip(rgb).with_start(start).with_end(end)
+    mask = ImageClip(alpha, is_mask=True).with_start(start).with_end(end)
+    clip = clip.with_mask(mask)
 
     if fade and end - start > 2 * fade:
-        clip = clip.crossfadein(fade).crossfadeout(fade)
+        clip = clip.with_effects([CrossFadeIn(fade), CrossFadeOut(fade)])
 
     return clip
