@@ -118,6 +118,44 @@ maior qualidade (ou de vídeo) no futuro, em `pipeline/ai_image_generator.py`.
 > `#IA`, e ao postar no TikTok/YouTube **marque a opção "conteúdo gerado por IA"**.
 > Use só pra entreter/atrair — os agendamentos vêm dos vídeos do trabalho real.
 
+## Modo chroma key (mão real + texturas trocadas) 🎬
+
+Você grava **uma vez** uma mão de verdade com **esmalte verde-chroma** sobre
+**fundo branco claro** (papel cartão, parede). O pipeline isola por frame as
+unhas e o fundo e troca cada um por uma textura de vídeo real do Pexels
+(lava borbulhando, galáxia girando, raio elétrico, ouro líquido, ...).
+
+Resultado: mão e movimento humanos reais + unhas/fundo "impossíveis". Uma
+gravação vira N vídeos com texturas diferentes.
+
+```bash
+# Unhas de lava (fundo original preservado)
+python main.py "unhas de lava" --chroma ./minha_gravacao.mp4 --nail-texture lava
+
+# Unhas de raio + fundo de galáxia
+python main.py "unhas elétricas" --chroma ./take01.mp4 \
+   --nail-texture electric --bg-texture galaxy --music ./epic.mp3
+
+# Vinheta + upload direto
+python main.py "ouro líquido" --chroma ./take02.mp4 \
+   --nail-texture gold --bg-texture smoke \
+   --brand both --handle @nailsosuka --upload --privacy public
+```
+
+**Texturas pré-mapeadas (`--nail-texture` / `--bg-texture`):**
+`lava`, `fire`, `electric`, `galaxy`, `gold`, `water`, `smoke`, `neon`, `crystal`.
+Também aceita caminho local de MP4 se você já tem o clipe.
+
+**Como gravar bem:**
+- Esmalte verde-chroma vivo (ou fita adesiva verde colada nas unhas)
+- Fundo branco fosco, **iluminação difusa e frontal** (sem sombra forte)
+- 9:16, 60fps se possível (reduz motion blur na borda da unha)
+- Mantenha ~30cm entre a mão e o fundo (reduz "green spill" na pele)
+
+**Calibração:** thresholds HSV vivem em `pipeline/chroma_compositor.py`
+(`NAIL_HSV_LOW/HIGH`, `BG_HSV_LOW/HIGH`). Ajuste se o key falhar com o seu
+esmalte específico.
+
 ## Vinheta de marca (logo animado + CTA) ✨
 
 Adiciona o **logo da Nail Sosuka entrando e saindo** com um "pop" (escala + fade)

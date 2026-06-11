@@ -10,10 +10,11 @@ from pipeline.script_generator import (
     generate_fantasy_nail_prompts,
 )
 from pipeline.tts_generator import generate_audio
-from pipeline.broll_fetcher import fetch_broll_videos
+from pipeline.broll_fetcher import fetch_broll_videos, fetch_texture_video
 from pipeline.video_editor import assemble_video
 from pipeline.photo_slideshow import collect_media, build_slideshow
 from pipeline.ai_image_generator import generate_images
+from pipeline.chroma_compositor import chroma_composite
 from pipeline.youtube_uploader import upload_video
 from utils.helpers import ensure_dirs, clean_filename
 
@@ -179,6 +180,88 @@ def create_fantasy_nail_video(
         shutil.rmtree(run_dir, ignore_errors=True)
 
 
+def create_chroma_video(
+    theme: str,
+    source_video: str,
+    nail_texture: str,
+    bg_texture: str = None,
+    music: str = None,
+    upload: bool = False,
+    privacy: str = "private",
+    logo: str = None,
+    brand: str = None,
+    handle: str = None,
+    keep_source_audio: bool = False,
+) -> str:
+    """Pipeline chroma key: troca unhas verdes (e fundo branco) por texturas.
+
+    `nail_texture` / `bg_texture` podem ser uma chave (lava, galaxy, ...) — busca
+    no Pexels — ou um caminho local pra um MP4 que você já tem.
+    """
+    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+    run_dir = os.path.join(TEMP_DIR, timestamp)
+    tex_dir = os.path.join(run_dir, "textures")
+    ensure_dirs(run_dir, tex_dir, OUTPUT_DIR)
+
+    try:
+        print(f"\n=== Chroma (mão real + texturas): {theme} ===\n")
+
+        print("[1/4] Resolvendo texturas...")
+        nail_tex_path = _resolve_texture(nail_texture, tex_dir, role="unhas")
+        bg_tex_path = (
+            _resolve_texture(bg_texture, tex_dir, role="fundo") if bg_texture else None
+        )
+
+        print("[2/4] Gerando texto da postagem com IA...")
+        caption = generate_nail_caption(theme, with_narration=False)
+        print(f"      Gancho: {caption['hook']} | Título: {caption['title']}")
+
+        print("[3/4] Compondo chroma (per-frame OpenCV)...")
+        intermediate = os.path.join(run_dir, "chroma_raw.mp4")
+        chroma_composite(
+            source_video,
+            nail_tex_path,
+            intermediate,
+            background_video=bg_tex_path,
+            music_path=music,
+            keep_source_audio=keep_source_audio,
+        )
+
+        print("[4/4] Aplicando overlays (gancho, CTA, vinheta)...")
+        output_filename = f"{timestamp}_chroma_{clean_filename(theme)}.mp4"
+        output_path = os.path.join(OUTPUT_DIR, output_filename)
+        build_slideshow(
+            [intermediate],
+            output_path,
+            music_path=None,  # áudio já foi resolvido no chroma_composite
+            hook=caption.get("hook"),
+            cta=caption.get("cta"),
+            logo_path=logo,
+            brand=brand,
+            handle=handle,
+        )
+        print(f"      Salvo em: {output_path}")
+
+        _maybe_upload(upload, output_path, caption, privacy, step="[upload]")
+
+        print("\n=== Concluído! Vídeo chroma pronto pra Shorts/TikTok ===")
+        return output_path
+
+    finally:
+        shutil.rmtree(run_dir, ignore_errors=True)
+
+
+def _resolve_texture(value: str, tex_dir: str, role: str) -> str:
+    """Aceita caminho local OU chave de textura (busca no Pexels)."""
+    if os.path.isfile(value):
+        print(f"      {role}: arquivo local {value}")
+        return value
+    print(f"      {role}: buscando '{value}' no Pexels...")
+    path = fetch_texture_video(value, tex_dir)
+    print(f"      {role}: {path}")
+    return path
+
+
 def _maybe_upload(upload: bool, output_path: str, meta: dict, privacy: str, step: str):
     if upload:
         print(f"{step} Fazendo upload para o YouTube...")
@@ -231,6 +314,27 @@ if __name__ == "__main__":
         metavar="@perfil",
         help="@ do perfil mostrado na vinheta (ex.: @nailsosuka)",
     )
+    parser.add_argument(
+        "--chroma",
+        metavar="VIDEO",
+        help="Modo chroma key: caminho do vídeo da mão real (esmalte verde em fundo claro)",
+    )
+    parser.add_argument(
+        "--nail-texture",
+        metavar="TEX",
+        default="lava",
+        help="Textura das unhas: chave (lava, fire, electric, galaxy, gold, water, smoke, neon, crystal) ou caminho de MP4",
+    )
+    parser.add_argument(
+        "--bg-texture",
+        metavar="TEX",
+        help="Textura do fundo: chave ou caminho de MP4 (omita para manter o fundo original)",
+    )
+    parser.add_argument(
+        "--keep-source-audio",
+        action="store_true",
+        help="No modo --chroma, mantém o áudio da gravação original (se não houver --music)",
+    )
     parser.add_argument("--upload", action="store_true", help="Fazer upload para YouTube")
     parser.add_argument(
         "--privacy",
@@ -240,7 +344,21 @@ if __name__ == "__main__":
     )
     args = parser.parse_args()
 
-    if args.ai_nails:
+    if args.chroma:
+        create_chroma_video(
+            args.topic,
+            source_video=args.chroma,
+            nail_texture=args.nail_texture,
+            bg_texture=args.bg_texture,
+            music=args.music,
+            upload=args.upload,
+            privacy=args.privacy,
+            logo=args.logo,
+            brand=args.brand,
+            handle=args.handle,
+            keep_source_audio=args.keep_source_audio,
+        )
+    elif args.ai_nails:
         create_fantasy_nail_video(
             args.topic,
             count=args.ai_nails,
